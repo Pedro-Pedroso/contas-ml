@@ -3,6 +3,7 @@ import { Account, Filtros } from '../types'
 import { Filters } from './Filters'
 import {
   calcPercentualMeta,
+  calcPercentualVendas,
   calcMesesRestantes,
   corPercentualMeta,
   formatarData,
@@ -121,7 +122,7 @@ export function AccountsTable({
               <th>Responsável</th>
               <th>Tipo</th>
               <th>Prazo</th>
-              <th>Faturamento</th>
+              <th>Metas</th>
               <th>% Meta</th>
               <th>Sinal</th>
               <th>Status</th>
@@ -145,6 +146,20 @@ export function AccountsTable({
                   background: corPercentualMeta(percentual),
                 } satisfies CSSProperties
 
+                const isLojista = conta.tipo === 'lojista_digital'
+                const pctFat = conta.meta_faturamento === 0
+                  ? 0
+                  : Math.round((conta.faturamento_real / conta.meta_faturamento) * 100)
+                const pctVendas = calcPercentualVendas(conta)
+                const progressFatStyle = {
+                  width: `${Math.max(0, Math.min(pctFat, 100))}%`,
+                  background: corPercentualMeta(pctFat),
+                } satisfies CSSProperties
+                const progressVendasStyle = {
+                  width: `${Math.max(0, Math.min(pctVendas, 100))}%`,
+                  background: corPercentualMeta(pctVendas),
+                } satisfies CSSProperties
+
                 return (
                   <tr key={conta.id}>
                     <td data-label="Cliente" className="client-cell">
@@ -164,14 +179,42 @@ export function AccountsTable({
                         <span>{prazoTexto(meses)}</span>
                       </div>
                     </td>
-                    <td data-label="Faturamento">
-                      <div className="revenue-cell">
-                        <strong>{formatarMoeda(conta.faturamento_real)}</strong>
-                        <span>Meta {formatarMoeda(conta.meta_faturamento)}</span>
-                        <div className="progress-track" aria-hidden="true">
-                          <span style={progressStyle} />
+                    <td data-label="Metas">
+                      {isLojista ? (
+                        <div className="revenue-cell">
+                          <span className="meta-period-label">Últimos 60 dias</span>
+                          <div className="meta-row">
+                            <span className="meta-row-label">Fat.</span>
+                            <div className="meta-row-values">
+                              <strong>{formatarMoeda(conta.faturamento_real)}</strong>
+                              <span>Meta {formatarMoeda(conta.meta_faturamento)}</span>
+                              <div className="progress-track" aria-hidden="true">
+                                <span style={progressFatStyle} />
+                              </div>
+                            </div>
+                          </div>
+                          {conta.meta_vendas != null && conta.meta_vendas > 0 && (
+                            <div className="meta-row">
+                              <span className="meta-row-label">Ped.</span>
+                              <div className="meta-row-values">
+                                <strong>{conta.vendas_reais ?? 0} pedidos</strong>
+                                <span>Meta {conta.meta_vendas} pedidos</span>
+                                <div className="progress-track" aria-hidden="true">
+                                  <span style={progressVendasStyle} />
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      ) : (
+                        <div className="revenue-cell">
+                          <strong>{formatarMoeda(conta.faturamento_real)}</strong>
+                          <span>Meta {formatarMoeda(conta.meta_faturamento)}</span>
+                          <div className="progress-track" aria-hidden="true">
+                            <span style={progressStyle} />
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td data-label="% Meta">
                       <span className={metaClass(percentual)}>{percentual}%</span>

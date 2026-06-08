@@ -2,10 +2,24 @@
 
 import { Account } from '../types'
 
-/** Percentual da meta atingido (arredondado para baixo) */
+/** Percentual da meta de vendas atingido (só lojista_digital) */
+export function calcPercentualVendas(conta: Account): number {
+  if (!conta.meta_vendas || conta.meta_vendas === 0) return 0
+  return Math.round(((conta.vendas_reais ?? 0) / conta.meta_vendas) * 100)
+}
+
+/** Percentual da meta atingido — lojistas usam média de faturamento + vendas */
 export function calcPercentualMeta(conta: Account): number {
-  if (conta.meta_faturamento === 0) return 0
-  return Math.round((conta.faturamento_real / conta.meta_faturamento) * 100)
+  const pctFat = conta.meta_faturamento === 0
+    ? 0
+    : Math.round((conta.faturamento_real / conta.meta_faturamento) * 100)
+
+  if (conta.tipo === 'lojista_digital' && conta.meta_vendas && conta.meta_vendas > 0) {
+    const pctVendas = calcPercentualVendas(conta)
+    return Math.round((pctFat + pctVendas) / 2)
+  }
+
+  return pctFat
 }
 
 /** Meses restantes entre hoje e data_termino (arredondado para baixo) */

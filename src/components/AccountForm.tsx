@@ -99,13 +99,24 @@ export function AccountForm({ conta, onSalvar, onFechar }: Props) {
           </div>
 
           <div className="form-grid">
-            <Campo label="Meta de faturamento">
+            <Campo label={form.tipo === 'lojista_digital' ? 'Meta de faturamento (60 dias)' : 'Meta de faturamento mensal'}>
               <input type="number" className="control" required min={0} value={form.meta_faturamento} onChange={set('meta_faturamento')} />
             </Campo>
-            <Campo label="Faturamento real">
+            <Campo label={form.tipo === 'lojista_digital' ? 'Faturamento real (60 dias)' : 'Faturamento real'}>
               <input type="number" className="control" required min={0} value={form.faturamento_real} onChange={set('faturamento_real')} />
             </Campo>
           </div>
+
+          {form.tipo === 'lojista_digital' && (
+            <div className="form-grid">
+              <Campo label="Meta de vendas (60 dias)">
+                <input type="number" className="control" min={0} value={form.meta_vendas ?? ''} onChange={set('meta_vendas')} placeholder="225" />
+              </Campo>
+              <Campo label="Vendas realizadas (60 dias)">
+                <input type="number" className="control" min={0} value={form.vendas_reais ?? ''} onChange={set('vendas_reais')} placeholder="0" />
+              </Campo>
+            </div>
+          )}
 
           <div className="check-grid">
             <label className="check-card">

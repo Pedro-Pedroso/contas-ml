@@ -5,8 +5,8 @@ import { formatarData } from './calculations'
 
 const CABECALHO = [
   'id', 'nome_cliente', 'assessor', 'tipo', 'estrela', 'data_inicio',
-  'data_termino', 'meta_faturamento', 'faturamento_real', 'em_risco',
-  'status', 'observacao',
+  'data_termino', 'meta_faturamento', 'faturamento_real', 'meta_vendas',
+  'vendas_reais', 'em_risco', 'status', 'observacao',
 ]
 
 /** Exporta array de contas para CSV e força download */
@@ -24,6 +24,8 @@ export function exportarCSV(contas: Account[]): void {
         formatarData(c.data_termino),
         c.meta_faturamento,
         c.faturamento_real,
+        c.meta_vendas ?? '',
+        c.vendas_reais ?? '',
         c.em_risco,
         c.status,
         `"${c.observacao ?? ''}"`,
@@ -63,12 +65,12 @@ export function importarCSV(
       const cols = linha.match(/(".*?"|[^,]+)(?=,|$)/g)?.map((v) =>
         v.replace(/^"|"$/g, '').trim()
       )
-      if (!cols || cols.length < 10) {
+      if (!cols || cols.length < 12) {
         erros++
         return
       }
 
-      const [, nome_cliente, assessor, tipo, estrela, , , meta, real, em_risco, status, observacao] = cols
+      const [, nome_cliente, assessor, tipo, estrela, , , meta, real, meta_vendas_str, vendas_reais_str, em_risco, status, observacao] = cols
 
       if (!nome_cliente || !assessor || !tipo || !status) {
         erros++
@@ -91,6 +93,8 @@ export function importarCSV(
         data_termino: parseData(cols[6]),
         meta_faturamento: Number(meta) || 0,
         faturamento_real: Number(real) || 0,
+        ...(meta_vendas_str ? { meta_vendas: Number(meta_vendas_str) } : {}),
+        ...(vendas_reais_str ? { vendas_reais: Number(vendas_reais_str) } : {}),
         em_risco: em_risco === 'true',
         status: status as StatusConta,
         observacao: observacao ?? '',
