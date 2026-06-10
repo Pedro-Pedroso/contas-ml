@@ -1,101 +1,71 @@
-import { useState, useRef, type ChangeEvent, type CSSProperties } from 'react'
-import { Account, Filtros } from '../types'
-import { Filters } from './Filters'
+import { useState, useRef, type ChangeEvent } from 'react'
+import { Account } from '../types'
+import { Icon, Avatar, Bar } from './Primitives'
 import {
   calcPercentualMeta,
   calcPercentualVendas,
   calcMesesRestantes,
-  corPercentualMeta,
   formatarData,
   formatarMoeda,
   isContaInicial,
 } from '../utils/calculations'
 import { exportarCSV, importarCSV } from '../utils/csv'
 
+type Filtro = 'todas' | 'risco' | 'inicial' | 'criticos'
+type SortKey = 'cliente' | 'assessor' | 'pct' | 'prazo' | null
+type SortDir = 'asc' | 'desc'
+
 interface Props {
   contas: Account[]
-  filtros: Filtros
-  onFiltros: (f: Filtros) => void
   onEditar: (conta: Account) => void
   onExcluir: (id: string) => void
   onImportar: (novasContas: Account[]) => void
   onToast: (msg: string, tipo: 'sucesso' | 'erro') => void
 }
 
-type ColunaOrdem = 'nome_cliente' | 'assessor' | 'percentual' | 'prazo' | 'status' | null
-type Direcao = 'asc' | 'desc'
-
-function badgeTipo(tipo: Account['tipo']) {
-  return (
-    <span className={`badge badge-type-${tipo === 'lojista_digital' ? 'digital' : 'monthly'}`}>
-      {tipo === 'lojista_digital' ? 'Lojista Digital' : 'Mensalista'}
-    </span>
-  )
-}
-
-function badgeStatus(status: Account['status']) {
-  const labels: Record<Account['status'], string> = {
-    ativo: 'Ativo',
-    encerrado: 'Encerrado',
-    pausado: 'Pausado',
-  }
-  return <span className={`badge badge-status-${status}`}>{labels[status]}</span>
-}
-
-function metaClass(percentual: number) {
-  if (percentual >= 80) return 'metric-pill success'
-  if (percentual >= 50) return 'metric-pill warning'
-  return 'metric-pill danger'
-}
-
-function prazoTexto(meses: number) {
+function prazoTexto(meses: number): string {
   if (meses < 0) return 'Contrato vencido'
   if (meses === 0) return 'Vence este mês'
   if (meses === 1) return '1 mês restante'
   return `${meses} meses restantes`
 }
 
-function SortIcon({ coluna, atual, direcao }: { coluna: ColunaOrdem; atual: ColunaOrdem; direcao: Direcao }) {
-  if (coluna !== atual) return <span className="sort-icon sort-icon--idle" aria-hidden="true">↕</span>
-  return <span className="sort-icon sort-icon--active" aria-hidden="true">{direcao === 'asc' ? '↑' : '↓'}</span>
-}
-
-export function AccountsTable({
-  contas, filtros, onFiltros, onEditar, onExcluir, onImportar, onToast,
-}: Props) {
+export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast }: Props) {
   const inputCSV = useRef<HTMLInputElement>(null)
-  const filtrosAtivos = Object.values(filtros).filter(Boolean).length
-  const [ordem, setOrdem] = useState<ColunaOrdem>(null)
-  const [direcao, setDirecao] = useState<Direcao>('asc')
+  const [busca, setBusca] = useState('')
+  const [filtro, setFiltro] = useState<Filtro>('todas')
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({ key: 'pct', dir: 'desc' })
 
-  const alternarOrdem = (coluna: ColunaOrdem) => {
-    if (ordem === coluna) {
-      setDirecao((d) => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setOrdem(coluna)
-      setDirecao('asc')
-    }
+  const toggleSort = (key: SortKey) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' }))
+
+  const arrow = (key: SortKey) => {
+    if (sort.key !== key) return <span className="arrow">▼</span>
+    return <span className="arrow on">{sort.dir === 'asc' ? '▲' : '▼'}</span>
   }
 
-  const contasFiltradas = contas.filter((conta) => {
-    if (filtros.assessor && conta.assessor !== filtros.assessor) return false
-    if (filtros.tipo && conta.tipo !== filtros.tipo) return false
-    if (filtros.status && conta.status !== filtros.status) return false
-    if (filtros.risco === 'sim' && !conta.em_risco) return false
-    if (filtros.risco === 'nao' && conta.em_risco) return false
-    if (filtros.busca && !conta.nome_cliente.toLowerCase().includes(filtros.busca.toLowerCase())) return false
-    return true
-  })
+  const ativas = contas.filter((c) => c.status === 'ativo')
 
-  const contasOrdenadas = [...contasFiltradas].sort((a, b) => {
-    if (!ordem) return 0
+  let list = ativas
+  if (busca.trim()) {
+    const q = busca.toLowerCase()
+    list = list.filter(
+      (c) => c.nome_cliente.toLowerCase().includes(q) || c.assessor.toLowerCase().includes(q)
+    )
+  }
+  if (filtro === 'risco')    list = list.filter((c) => c.em_risco)
+  if (filtro === 'inicial')  list = list.filter((c) => isContaInicial(c))
+  if (filtro === 'criticos') list = list.filter((c) => calcMesesRestantes(c.data_termino) <= 2)
+
+  const sorted = [...list].sort((a, b) => {
+    const dir = sort.dir === 'asc' ? 1 : -1
+    if (!sort.key) return 0
     let cmp = 0
-    if (ordem === 'nome_cliente') cmp = a.nome_cliente.localeCompare(b.nome_cliente)
-    else if (ordem === 'assessor') cmp = a.assessor.localeCompare(b.assessor)
-    else if (ordem === 'percentual') cmp = calcPercentualMeta(a) - calcPercentualMeta(b)
-    else if (ordem === 'prazo') cmp = calcMesesRestantes(a.data_termino) - calcMesesRestantes(b.data_termino)
-    else if (ordem === 'status') cmp = a.status.localeCompare(b.status)
-    return direcao === 'asc' ? cmp : -cmp
+    if (sort.key === 'cliente')  cmp = a.nome_cliente.localeCompare(b.nome_cliente)
+    if (sort.key === 'assessor') cmp = a.assessor.localeCompare(b.assessor)
+    if (sort.key === 'pct')      cmp = calcPercentualMeta(a) - calcPercentualMeta(b)
+    if (sort.key === 'prazo')    cmp = calcMesesRestantes(a.data_termino) - calcMesesRestantes(b.data_termino)
+    return cmp * dir
   })
 
   const handleImportar = (event: ChangeEvent<HTMLInputElement>) => {
@@ -111,191 +81,201 @@ export function AccountsTable({
     event.target.value = ''
   }
 
-  const thProps = (coluna: ColunaOrdem) => ({
-    className: `th-sortable${ordem === coluna ? ' th-sortable--active' : ''}`,
-    onClick: () => alternarOrdem(coluna),
-    role: 'button' as const,
-    tabIndex: 0,
-    onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') alternarOrdem(coluna) },
-  })
-
   return (
-    <section className="accounts-panel">
-      <div className="panel-toolbar">
+    <>
+      <div className="section-head">
         <div>
-          <span className="section-kicker">Carteira</span>
           <h2>Contas gerenciadas</h2>
-          <p>
-            {contasOrdenadas.length} de {contas.length} conta(s)
-            {filtrosAtivos > 0 ? ` com ${filtrosAtivos} filtro(s)` : ' exibidas'}
-          </p>
-        </div>
-
-        <div className="toolbar-actions">
-          <button className="button button-secondary" onClick={() => exportarCSV(contasOrdenadas)}>
-            Exportar CSV
-          </button>
-          <button className="button button-secondary" onClick={() => inputCSV.current?.click()}>
-            Importar CSV
-          </button>
-          <input
-            ref={inputCSV}
-            type="file"
-            accept=".csv"
-            className="visually-hidden"
-            onChange={handleImportar}
-          />
+          <p>{sorted.length} de {ativas.length} contas ativas</p>
         </div>
       </div>
 
-      <Filters filtros={filtros} onChange={onFiltros} contas={contas} />
+      {/* Toolbar: busca + seg control + exportar */}
+      <div className="toolbar">
+        <div className="search">
+          <span className="ico"><Icon name="search" /></span>
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar cliente ou assessor…"
+          />
+        </div>
+        <div className="seg">
+          {([
+            ['todas',    'Todas'],
+            ['risco',    'Em risco'],
+            ['inicial',  'Iniciais'],
+            ['criticos', 'Prazo crítico'],
+          ] as [Filtro, string][]).map(([k, l]) => (
+            <button key={k} className={filtro === k ? 'on' : ''} onClick={() => setFiltro(k)}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div style={{ flex: 1 }} />
+        <button className="btn btn-ghost" onClick={() => exportarCSV(sorted)}>
+          <Icon name="download" size={16} />Exportar
+        </button>
+        <button className="btn btn-ghost" onClick={() => inputCSV.current?.click()}>
+          Importar CSV
+        </button>
+        <input
+          ref={inputCSV}
+          type="file"
+          accept=".csv"
+          className="visually-hidden"
+          onChange={handleImportar}
+        />
+      </div>
 
-      <div className="table-shell">
-        <table className="accounts-table">
+      <div className="table-wrap">
+        <table className="accounts">
           <thead>
             <tr>
-              <th {...thProps('nome_cliente')}>
-                Cliente <SortIcon coluna="nome_cliente" atual={ordem} direcao={direcao} />
+              <th className="sortable" onClick={() => toggleSort('cliente')}>
+                Cliente {arrow('cliente')}
               </th>
-              <th {...thProps('assessor')}>
-                Responsável <SortIcon coluna="assessor" atual={ordem} direcao={direcao} />
+              <th className="sortable" onClick={() => toggleSort('assessor')}>
+                Responsável {arrow('assessor')}
               </th>
               <th>Tipo</th>
-              <th {...thProps('prazo')}>
-                Prazo <SortIcon coluna="prazo" atual={ordem} direcao={direcao} />
+              <th>Meta · realizado</th>
+              <th className="sortable num" onClick={() => toggleSort('pct')}>
+                % Meta {arrow('pct')}
               </th>
-              <th>Metas</th>
-              <th {...thProps('percentual')}>
-                % Meta <SortIcon coluna="percentual" atual={ordem} direcao={direcao} />
+              <th className="sortable" onClick={() => toggleSort('prazo')}>
+                Prazo {arrow('prazo')}
               </th>
-              <th {...thProps('status')}>
-                Status <SortIcon coluna="status" atual={ordem} direcao={direcao} />
-              </th>
-              <th>Ações</th>
+              <th>Status</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {contasOrdenadas.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="empty-state">
-                  Nenhuma conta encontrada para os filtros selecionados.
-                </td>
-              </tr>
-            ) : (
-              contasOrdenadas.map((conta) => {
-                const percentual = calcPercentualMeta(conta)
-                const meses = calcMesesRestantes(conta.data_termino)
-                const progresso = Math.max(0, Math.min(percentual, 100))
-                const progressStyle = {
-                  width: `${progresso}%`,
-                  background: corPercentualMeta(percentual),
-                } satisfies CSSProperties
+            {sorted.length === 0 ? (
+              <tr><td colSpan={8} className="empty">Nenhuma conta para esse filtro.</td></tr>
+            ) : sorted.map((conta) => {
+              const p      = calcPercentualMeta(conta)
+              const pFat   = conta.meta_faturamento === 0 ? 0 : Math.round((conta.faturamento_real / conta.meta_faturamento) * 100)
+              const pVend  = calcPercentualVendas(conta)
+              const meses  = calcMesesRestantes(conta.data_termino)
+              const inicial = isContaInicial(conta)
+              const isLoja = conta.tipo === 'lojista_digital' && (conta.meta_vendas ?? 0) > 0
+              const cor    = p >= 80 ? 'green' : p >= 50 ? 'amber' : 'red'
 
-                const isLojista = conta.tipo === 'lojista_digital'
-                const temPedidos = isLojista && conta.meta_vendas != null && conta.meta_vendas > 0
-                const pctFat = conta.meta_faturamento === 0
-                  ? 0
-                  : Math.round((conta.faturamento_real / conta.meta_faturamento) * 100)
-                const pctVendas = calcPercentualVendas(conta)
-
-                const inicial = isContaInicial(conta)
-
-                return (
-                  <tr key={conta.id} className={inicial ? 'row-inicial' : ''}>
-                    <td data-label="Cliente" className="client-cell">
-                      <div className="client-main">
-                        <strong>{conta.nome_cliente}</strong>
+              return (
+                <tr key={conta.id} className={conta.em_risco ? 'is-risk' : ''}>
+                  {/* Cliente */}
+                  <td>
+                    <div className="cli">
+                      <div className="cli-top">
                         {conta.estrela && (
-                          <span className="priority-pill" title="Estrela">★ Estrela</span>
+                          <span className="badge star" title="Cliente estrela">
+                            <Icon name="star" size={13} />
+                          </span>
                         )}
-                        {inicial && (
-                          <span className="badge badge-inicial" title="Conta com até 60 dias — em fase inicial">Inicial</span>
-                        )}
+                        <span className="cli-name">{conta.nome_cliente}</span>
+                        {inicial && <span className="badge inicial">Inicial</span>}
                         {conta.em_risco && (
-                          <span className="badge badge-risk">Risco</span>
+                          <span className="badge risk">
+                            <Icon name="alert" size={11} />Risco
+                          </span>
                         )}
                       </div>
-                      {conta.observacao && <span className="client-note">{conta.observacao}</span>}
-                    </td>
-                    <td data-label="Responsável">
-                      <span className="muted">{conta.assessor}</span>
-                    </td>
-                    <td data-label="Tipo">{badgeTipo(conta.tipo)}</td>
-                    <td data-label="Prazo">
-                      <div className={`deadline-cell ${meses <= 2 ? 'is-critical' : ''}`}>
-                        <strong>{formatarData(conta.data_termino)}</strong>
-                        <span>{prazoTexto(meses)}</span>
+                      {conta.observacao && <span className="cli-note">{conta.observacao}</span>}
+                    </div>
+                  </td>
+
+                  {/* Responsável */}
+                  <td>
+                    <div className="adv-inline">
+                      <Avatar name={conta.assessor} size={26} />
+                      <span>{conta.assessor}</span>
+                    </div>
+                  </td>
+
+                  {/* Tipo */}
+                  <td>
+                    <span className={`badge type-${conta.tipo === 'lojista_digital' ? 'lojista' : 'mensalista'}`}>
+                      {conta.tipo === 'lojista_digital' ? 'Lojista Digital' : 'Mensalista'}
+                    </span>
+                  </td>
+
+                  {/* Meta · realizado */}
+                  <td className="meta-cell">
+                    {isLoja ? (
+                      <div className="meta-loja">
+                        <div className="meta-line">
+                          <span className="ml-k">Faturamento</span>
+                          <span className="ml-v">
+                            {formatarMoeda(conta.faturamento_real)}{' '}
+                            <i>/ {formatarMoeda(conta.meta_faturamento)}</i>
+                          </span>
+                        </div>
+                        <div className="meta-line">
+                          <span className="ml-k">Pedidos</span>
+                          <span className="ml-v">
+                            {conta.vendas_reais ?? 0}{' '}
+                            <i>/ {conta.meta_vendas}</i>
+                          </span>
+                        </div>
+                        <div className="meta-combined">
+                          <Bar pct={p} />
+                        </div>
+                        <span className="mc-label">Progresso = média faturamento + pedidos</span>
                       </div>
-                    </td>
-                    <td data-label="Metas">
-                      {isLojista ? (
-                        <div className="revenue-cell">
-                          <span className="meta-period-label">Últimos 60 dias</span>
-                          <div className="meta-row">
-                            <span className="meta-row-label">Fat.</span>
-                            <div className="meta-row-values">
-                              <strong>{formatarMoeda(conta.faturamento_real)}</strong>
-                              <span>Meta {formatarMoeda(conta.meta_faturamento)}</span>
-                            </div>
-                          </div>
-                          {temPedidos && (
-                            <div className="meta-row">
-                              <span className="meta-row-label">Ped.</span>
-                              <div className="meta-row-values">
-                                <strong>{conta.vendas_reais ?? 0} pedidos</strong>
-                                <span>Meta {conta.meta_vendas} pedidos</span>
-                              </div>
-                            </div>
-                          )}
-                          {/* Barra única representando o atingimento médio */}
-                          <div className="progress-track" aria-hidden="true">
-                            <span style={progressStyle} />
-                          </div>
+                    ) : (
+                      <>
+                        <div className="meta-figs">
+                          <span className="meta-real">{formatarMoeda(conta.faturamento_real)}</span>
+                          <span className="meta-goal">/ {formatarMoeda(conta.meta_faturamento)}</span>
                         </div>
-                      ) : (
-                        <div className="revenue-cell">
-                          <strong>{formatarMoeda(conta.faturamento_real)}</strong>
-                          <span>Meta {formatarMoeda(conta.meta_faturamento)}</span>
-                          <div className="progress-track" aria-hidden="true">
-                            <span style={progressStyle} />
-                          </div>
-                        </div>
+                        <Bar pct={p} />
+                      </>
+                    )}
+                  </td>
+
+                  {/* % Meta */}
+                  <td>
+                    <div className="pct-row">
+                      <span className={`pct is-${cor}`}>{p}%</span>
+                      {isLoja && (
+                        <span className="pct-split">fat {pFat}% · ped {pVend}%</span>
                       )}
-                    </td>
-                    <td data-label="% Meta">
-                      <span className={metaClass(percentual)}>{percentual}%</span>
-                      {isLojista && temPedidos && (
-                        <div className="meta-pill-detail">
-                          <span className="muted" style={{ fontSize: '11px' }}>Fat. {pctFat}% · Ped. {pctVendas}%</span>
-                        </div>
-                      )}
-                    </td>
-                    <td data-label="Status">{badgeStatus(conta.status)}</td>
-                    <td data-label="Ações">
-                      <div className="row-actions">
-                        <button
-                          className="button button-table"
-                          onClick={() => onEditar(conta)}
-                          aria-label={`Editar ${conta.nome_cliente}`}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          className="button button-danger"
-                          onClick={() => onExcluir(conta.id)}
-                          aria-label={`Excluir ${conta.nome_cliente}`}
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })
-            )}
+                    </div>
+                  </td>
+
+                  {/* Prazo */}
+                  <td>
+                    <div className={`deadline${meses <= 2 ? ' crit' : ''}`}>
+                      <b>{formatarData(conta.data_termino)}</b>
+                      <span>{prazoTexto(meses)}</span>
+                    </div>
+                  </td>
+
+                  {/* Status */}
+                  <td>
+                    <span className="status-dot">
+                      <span className={`d ${conta.status}`} />
+                      {conta.status.charAt(0).toUpperCase() + conta.status.slice(1)}
+                    </span>
+                  </td>
+
+                  {/* Ações */}
+                  <td>
+                    <button
+                      className="row-act"
+                      title={`Editar ${conta.nome_cliente}`}
+                      onClick={() => onEditar(conta)}
+                    >
+                      <Icon name="dots" size={18} />
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
-    </section>
+    </>
   )
 }

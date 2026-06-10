@@ -73,12 +73,21 @@ export function calcMetricasPorAssessor(contas: Account[]) {
     const gmvTotal = contasAssessor.reduce((acc, c) => acc + c.faturamento_real, 0)
     const iniciais = contasAssessor.filter(isContaInicial).length
 
+    const rampadas = contasAssessor.filter((c) => !isContaInicial(c)).length
+    const metaBatida = contasAssessor
+      .filter((c) => !isContaInicial(c) && calcPercentualMeta(c) >= 100).length
+    const emRisco = contasAssessor.filter((c) => c.em_risco).length
+
     return {
       assessor,
+      contas: contasAssessor,
       totalContas: contasAssessor.length,
       iniciais,
+      rampadas,
       mediaAtingimento,
       gmvTotal,
+      metaBatida,
+      emRisco,
     }
   }).sort((a, b) => a.assessor.localeCompare(b.assessor))
 }

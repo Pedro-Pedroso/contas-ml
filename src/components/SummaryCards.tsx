@@ -1,70 +1,55 @@
-import { Account } from '../types'
-import {
-  calcMediaAtingimento,
-  calcEncerrandoEm60Dias,
-  isContaInicial,
-} from '../utils/calculations'
+// Strip secundária — 5 células com indicadores de segundo nível
 
 interface Props {
-  contas: Account[]
+  atingMedio: number
+  metaBatida: number
+  rampadas: number
+  prazosCriticos: number
+  iniciais: number
+  estrela: number
 }
 
-export function SummaryCards({ contas }: Props) {
-  const ativas = contas.filter((conta) => conta.status === 'ativo')
-  const totalAtivas = ativas.length
-  const emRisco = ativas.filter((conta) => conta.em_risco).length
-  const mediaAtingimento = calcMediaAtingimento(contas)
-  const prazosCriticos = calcEncerrandoEm60Dias(contas).length
-  const contasIniciais = ativas.filter(isContaInicial).length
-
-  const cards = [
-    {
-      label: 'Contas ativas',
-      valor: totalAtivas,
-      sufixo: '',
-      detalhe: `${contas.length} contas na base`,
-      tom: 'info',
-    },
-    {
-      label: 'Contas em risco',
-      valor: emRisco,
-      sufixo: '',
-      detalhe: 'Prioridade de retenção',
-      tom: emRisco > 0 ? 'danger' : 'success',
-    },
-    {
-      label: 'Atingimento médio',
-      valor: mediaAtingimento,
-      sufixo: '%',
-      detalhe: contasIniciais > 0
-        ? `${contasIniciais} em fase inicial (excluídas)`
-        : 'Média das contas rampadas',
-      tom: mediaAtingimento >= 80 ? 'success' : mediaAtingimento >= 50 ? 'warning' : 'danger',
-    },
-    {
-      label: 'Prazos críticos',
-      valor: prazosCriticos,
-      sufixo: '',
-      detalhe: 'Vencidos ou até 60 dias',
-      tom: prazosCriticos > 0 ? 'warning' : 'success',
-    },
-  ]
+export function SummaryCards({ atingMedio, metaBatida, rampadas, prazosCriticos, iniciais, estrela }: Props) {
+  const atingColor = atingMedio >= 80 ? 'var(--green)' : atingMedio >= 50 ? 'var(--amber)' : 'var(--red)'
 
   return (
-    <section className="summary-grid" aria-label="Resumo executivo da carteira">
-      {cards.map((card) => (
-        <article key={card.label} className={`summary-card tone-${card.tom}`}>
-          <div className="summary-card__top">
-            <span>{card.label}</span>
-            <span className="summary-card__mark" aria-hidden="true" />
-          </div>
-          <strong>
-            {card.valor}
-            {card.sufixo}
-          </strong>
-          <p>{card.detalhe}</p>
-        </article>
-      ))}
-    </section>
+    <div className="strip">
+      <div className="strip-cell">
+        <span className="s-label">
+          <span className="dotmark accent" />
+          Ating. médio
+        </span>
+        <span className="s-val" style={{ color: atingColor }}>
+          {atingMedio}<span className="u">%</span>
+        </span>
+      </div>
+
+      <div className="strip-cell">
+        <span className="s-label">Metas batidas</span>
+        <span className="s-val dim">
+          {metaBatida}<span className="u">/ {rampadas}</span>
+        </span>
+      </div>
+
+      <div className="strip-cell">
+        <span className="s-label">
+          {prazosCriticos > 0 && <span className="dotmark amber" />}
+          Prazos críticos
+        </span>
+        <span className={`s-val ${prazosCriticos > 0 ? 'warn' : 'dim'}`}>
+          {prazosCriticos}
+        </span>
+      </div>
+
+      <div className="strip-cell">
+        <span className="s-label">Em fase inicial</span>
+        <span className="s-val dim">{iniciais}</span>
+      </div>
+
+      <div className="strip-cell">
+        <span className="s-label">Clientes estrela</span>
+        <span className="s-val dim">{estrela}</span>
+      </div>
+    </div>
   )
 }
