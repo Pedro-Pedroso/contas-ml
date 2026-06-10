@@ -22,6 +22,15 @@ export function calcPercentualMeta(conta: Account): number {
   return pctFat
 }
 
+/** True se a conta tem até 60 dias desde data_inicio (ainda em fase inicial) */
+export function isContaInicial(conta: Account): boolean {
+  const inicio = new Date(conta.data_inicio)
+  const hoje = new Date()
+  const diffMs = hoje.getTime() - inicio.getTime()
+  const diffDias = diffMs / (1000 * 60 * 60 * 24)
+  return diffDias <= 60
+}
+
 /** Meses restantes entre hoje e data_termino (arredondado para baixo) */
 export function calcMesesRestantes(dataTerm: string): number {
   const hoje = new Date()
@@ -30,9 +39,9 @@ export function calcMesesRestantes(dataTerm: string): number {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.44))
 }
 
-/** Média aritmética de % de meta de todas as contas ativas */
+/** Média aritmética de % de meta das contas ativas excluindo fase inicial */
 export function calcMediaAtingimento(contas: Account[]): number {
-  const ativas = contas.filter((c) => c.status === 'ativo')
+  const ativas = contas.filter((c) => c.status === 'ativo' && !isContaInicial(c))
   if (ativas.length === 0) return 0
   const soma = ativas.reduce((acc, c) => acc + calcPercentualMeta(c), 0)
   return Math.round(soma / ativas.length)
@@ -43,6 +52,35 @@ export function calcEncerrandoEm60Dias(contas: Account[]): Account[] {
   return contas.filter(
     (c) => c.status === 'ativo' && calcMesesRestantes(c.data_termino) <= 2
   )
+}
+
+/** Agrupa contas por assessor com métricas consolidadas */
+export function calcMetricasPorAssessor(contas: Account[]) {
+  const ativas = contas.filter((c) => c.status === 'ativo')
+  const mapa = new Map<string, Account[]>()
+
+  for (const conta of ativas) {
+    const lista = mapa.get(conta.assessor) ?? []
+    lista.push(conta)
+    mapa.set(conta.assessor, lista)
+  }
+
+  return Array.from(mapa.entries()).map(([assessor, contasAssessor]) => {
+    const contasRampadas = contasAssessor.filter((c) => !isContaInicial(c))
+    const mediaAtingimento = contasRampadas.length === 0
+      ? null
+      : Math.round(contasRampadas.reduce((acc, c) => acc + calcPercentualMeta(c), 0) / contasRampadas.length)
+    const gmvTotal = contasAssessor.reduce((acc, c) => acc + c.faturamento_real, 0)
+    const iniciais = contasAssessor.filter(isContaInicial).length
+
+    return {
+      assessor,
+      totalContas: contasAssessor.length,
+      iniciais,
+      mediaAtingimento,
+      gmvTotal,
+    }
+  }).sort((a, b) => a.assessor.localeCompare(b.assessor))
 }
 
 /** Cor do badge de % de meta */

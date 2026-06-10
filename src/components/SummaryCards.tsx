@@ -2,6 +2,7 @@ import { Account } from '../types'
 import {
   calcMediaAtingimento,
   calcEncerrandoEm60Dias,
+  isContaInicial,
 } from '../utils/calculations'
 
 interface Props {
@@ -9,10 +10,12 @@ interface Props {
 }
 
 export function SummaryCards({ contas }: Props) {
-  const totalAtivas = contas.filter((conta) => conta.status === 'ativo').length
-  const emRisco = contas.filter((conta) => conta.em_risco && conta.status === 'ativo').length
+  const ativas = contas.filter((conta) => conta.status === 'ativo')
+  const totalAtivas = ativas.length
+  const emRisco = ativas.filter((conta) => conta.em_risco).length
   const mediaAtingimento = calcMediaAtingimento(contas)
   const prazosCriticos = calcEncerrandoEm60Dias(contas).length
+  const contasIniciais = ativas.filter(isContaInicial).length
 
   const cards = [
     {
@@ -33,7 +36,9 @@ export function SummaryCards({ contas }: Props) {
       label: 'Atingimento médio',
       valor: mediaAtingimento,
       sufixo: '%',
-      detalhe: 'Média das contas ativas',
+      detalhe: contasIniciais > 0
+        ? `${contasIniciais} em fase inicial (excluídas)`
+        : 'Média das contas rampadas',
       tom: mediaAtingimento >= 80 ? 'success' : mediaAtingimento >= 50 ? 'warning' : 'danger',
     },
     {

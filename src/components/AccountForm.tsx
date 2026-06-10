@@ -122,7 +122,7 @@ export function AccountForm({ conta, onSalvar, onFechar }: Props) {
             <label className="check-card">
               <input type="checkbox" checked={form.estrela} onChange={set('estrela')} />
               <span>
-                <strong>Cliente prioritário</strong>
+                <strong>★ Estrela</strong>
                 <small>Destacar na carteira</small>
               </span>
             </label>

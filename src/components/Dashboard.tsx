@@ -3,6 +3,7 @@ import { Account, Filtros } from '../types'
 import { SummaryCards } from './SummaryCards'
 import { AccountsTable } from './AccountsTable'
 import { AccountForm } from './AccountForm'
+import { AdvisorView } from './AdvisorView'
 import { useAccounts } from '../hooks/useAccounts'
 import { formatarMoeda } from '../utils/calculations'
 
@@ -112,12 +113,14 @@ export function Dashboard() {
           </strong>
         </div>
         <div>
-          <span>Clientes prioritários</span>
+          <span>Clientes estrela</span>
           <strong>{clientesEstrela}</strong>
         </div>
       </section>
 
       <SummaryCards contas={contas} />
+
+      <AdvisorView contas={contas} />
 
       <AccountsTable
         contas={contas}
