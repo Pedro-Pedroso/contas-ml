@@ -221,7 +221,7 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
                         <div className="meta-combined">
                           <Bar pct={p} />
                         </div>
-                        <span className="mc-label">Progresso = média faturamento + pedidos</span>
+                        <span className="mc-label">Cada meta vale 50% — excesso não compensa a outra</span>
                       </div>
                     ) : (
                       <>

@@ -8,7 +8,9 @@ export function calcPercentualVendas(conta: Account): number {
   return Math.round(((conta.vendas_reais ?? 0) / conta.meta_vendas) * 100)
 }
 
-/** Percentual da meta atingido — lojistas usam média de faturamento + vendas */
+/** Percentual da meta atingido — lojistas usam 50% capped por métrica.
+ *  Cada indicador contribui no máximo 50 pts; exceder a meta não compensa o outro.
+ *  Ex: fat 27% + pedidos 152% → 13,5 + 50 = 64% (não 90% como na média simples). */
 export function calcPercentualMeta(conta: Account): number {
   const pctFat = conta.meta_faturamento === 0
     ? 0
@@ -16,7 +18,7 @@ export function calcPercentualMeta(conta: Account): number {
 
   if (conta.tipo === 'lojista_digital' && conta.meta_vendas && conta.meta_vendas > 0) {
     const pctVendas = calcPercentualVendas(conta)
-    return Math.round((pctFat + pctVendas) / 2)
+    return Math.round(Math.min(pctFat, 100) / 2 + Math.min(pctVendas, 100) / 2)
   }
 
   return pctFat
