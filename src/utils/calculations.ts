@@ -24,11 +24,22 @@ export function calcPercentualMeta(conta: Account): number {
   return pctFat
 }
 
-/** Crescimento % do faturamento vs mês anterior. Null se não há dado do mês anterior. */
+/** Crescimento % entre os dois últimos meses FECHADOS (mês anterior vs retrasado).
+ *  Compara períodos completos — o mês corrente parcial nunca entra na conta. */
 export function calcCrescimento(conta: Account): number | null {
   const anterior = conta.faturamento_mes_anterior
-  if (anterior == null || anterior === 0) return null
-  return ((conta.faturamento_real / anterior) - 1) * 100
+  const retrasado = conta.faturamento_mes_retrasado
+  if (anterior == null || retrasado == null || retrasado === 0) return null
+  return ((anterior / retrasado) - 1) * 100
+}
+
+/** Nomes abreviados dos dois meses fechados comparados (ex.: { anterior: 'mai', retrasado: 'abr' }) */
+export function nomesMesesComparacao(): { anterior: string; retrasado: string } {
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+  const hoje = new Date()
+  const ant = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1)
+  const ret = new Date(hoje.getFullYear(), hoje.getMonth() - 2, 1)
+  return { anterior: MESES[ant.getMonth()], retrasado: MESES[ret.getMonth()] }
 }
 
 /** True se a conta tem até 60 dias desde data_inicio (ainda em fase inicial) */

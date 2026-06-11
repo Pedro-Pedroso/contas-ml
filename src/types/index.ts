@@ -14,6 +14,7 @@ export interface Account {
   meta_faturamento: number
   faturamento_real: number
   faturamento_mes_anterior?: number
+  faturamento_mes_retrasado?: number
   meta_vendas?: number
   vendas_reais?: number
   em_risco: boolean

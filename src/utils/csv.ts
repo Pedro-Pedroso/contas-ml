@@ -11,7 +11,7 @@ const SEP = ';'
 
 const CABECALHO = [
   'Cliente', 'Assessor', 'Tipo', 'Estrela', 'Data Início', 'Data Término',
-  'Meta Faturamento', 'Faturamento', 'Faturamento Mês Anterior',
+  'Meta Faturamento', 'Faturamento', 'Faturamento Mês Anterior', 'Faturamento Mês Retrasado',
   'Meta Pedidos', 'Pedidos', 'Em Risco', 'Status', 'Observação',
 ]
 
@@ -45,6 +45,7 @@ export function exportarCSV(contas: Account[]): void {
         c.meta_faturamento,
         c.faturamento_real,
         c.faturamento_mes_anterior ?? '',
+        c.faturamento_mes_retrasado ?? '',
         c.meta_vendas ?? '',
         c.vendas_reais ?? '',
         simNao(c.em_risco),
@@ -87,6 +88,7 @@ const MAPA_COLUNAS: Record<string, string[]> = {
   meta_faturamento: ['meta faturamento', 'meta de faturamento', 'meta fat', 'meta r'],
   faturamento_real: ['faturamento', 'faturamento real', 'faturamento atual', 'fat real', 'realizado'],
   faturamento_mes_anterior: ['faturamento mes anterior', 'fat mes anterior', 'faturamento anterior', 'mes anterior'],
+  faturamento_mes_retrasado: ['faturamento mes retrasado', 'fat mes retrasado', 'faturamento retrasado', 'mes retrasado'],
   meta_vendas: ['meta pedidos', 'meta de pedidos', 'meta vendas', 'meta de vendas'],
   vendas_reais: ['pedidos', 'vendas', 'vendas reais', 'pedidos reais'],
   em_risco: ['em risco', 'risco'],
@@ -223,6 +225,7 @@ export function importarCSV(
       const metaVendas = parseNumero(pegar(cols, 'meta_vendas'))
       const vendasReais = parseNumero(pegar(cols, 'vendas_reais'))
       const fatAnterior = parseNumero(pegar(cols, 'faturamento_mes_anterior'))
+      const fatRetrasado = parseNumero(pegar(cols, 'faturamento_mes_retrasado'))
 
       const conta: Account = {
         id: crypto.randomUUID(),
@@ -235,6 +238,7 @@ export function importarCSV(
         meta_faturamento: parseNumero(pegar(cols, 'meta_faturamento')) ?? 0,
         faturamento_real: parseNumero(pegar(cols, 'faturamento_real')) ?? 0,
         ...(fatAnterior != null ? { faturamento_mes_anterior: fatAnterior } : {}),
+        ...(fatRetrasado != null ? { faturamento_mes_retrasado: fatRetrasado } : {}),
         ...(metaVendas != null ? { meta_vendas: metaVendas } : {}),
         ...(vendasReais != null ? { vendas_reais: vendasReais } : {}),
         em_risco: parseBool(pegar(cols, 'em_risco')),

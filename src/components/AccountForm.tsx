@@ -108,7 +108,7 @@ export function AccountForm({ conta, onSalvar, onFechar }: Props) {
           </div>
 
           <div className="form-grid">
-            <Campo label="Faturamento mês anterior (para cálculo de crescimento)">
+            <Campo label="Faturamento mês anterior (fechado)">
               <input
                 type="number"
                 className="control"
@@ -123,7 +123,21 @@ export function AccountForm({ conta, onSalvar, onFechar }: Props) {
                 placeholder="Deixe vazio se não houver"
               />
             </Campo>
-            <span />
+            <Campo label="Faturamento mês retrasado (fechado)">
+              <input
+                type="number"
+                className="control"
+                min={0}
+                value={form.faturamento_mes_retrasado ?? ''}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    faturamento_mes_retrasado: e.target.value === '' ? undefined : Number(e.target.value),
+                  }))
+                }
+                placeholder="Para cálculo de crescimento"
+              />
+            </Campo>
           </div>
 
           {form.tipo === 'lojista_digital' && (

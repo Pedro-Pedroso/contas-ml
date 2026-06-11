@@ -6,6 +6,7 @@ import {
   calcPercentualMeta,
   formatarMoeda,
   isContaInicial,
+  nomesMesesComparacao,
 } from '../utils/calculations'
 
 interface Props { contas: Account[] }
@@ -85,7 +86,7 @@ function AdvisorCard({ row, defaultOpen }: AdvisorCardProps) {
                 : row.mediaCrescimento < 0 ? 'var(--red)'
                 : 'var(--text)',
             }}
-            title="Média simples do crescimento de faturamento vs mês anterior"
+            title={`Média simples do crescimento das contas — ${nomesMesesComparacao().anterior} vs ${nomesMesesComparacao().retrasado} (meses fechados)`}
           >
             {row.mediaCrescimento == null ? (
               '—'

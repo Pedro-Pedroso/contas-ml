@@ -81,7 +81,9 @@ export function Bar({ pct }: BarProps) {
   )
 }
 
-// Indicador de crescimento vs mês anterior (▲ +12% / ▼ −5%)
+// Indicador de crescimento entre os dois últimos meses fechados (▲ +12% / ▼ −5%)
+import { nomesMesesComparacao } from '../utils/calculations'
+
 interface GrowthProps { crescimento: number | null }
 export function Growth({ crescimento }: GrowthProps) {
   if (crescimento === null) return null
@@ -89,8 +91,9 @@ export function Growth({ crescimento }: GrowthProps) {
   const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat'
   const seta = pct > 0 ? '▲' : pct < 0 ? '▼' : '＝'
   const sinal = pct > 0 ? '+' : ''
+  const { anterior, retrasado } = nomesMesesComparacao()
   return (
-    <span className={`growth ${cls}`} title="Variação vs mês anterior">
+    <span className={`growth ${cls}`} title={`Crescimento ${anterior} vs ${retrasado} (meses fechados)`}>
       {seta} {sinal}{pct}%
     </span>
   )
