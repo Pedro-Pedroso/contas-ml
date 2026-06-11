@@ -13,6 +13,7 @@ export interface Account {
   data_termino: string  // YYYY-MM-DD
   meta_faturamento: number
   faturamento_real: number
+  faturamento_mes_anterior?: number
   meta_vendas?: number
   vendas_reais?: number
   em_risco: boolean

@@ -618,6 +618,21 @@ table.accounts {
   display: flex; align-items: center; gap: 5px;
 }
 
+/* growth indicator (vs mês anterior) */
+.growth {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.growth.up   { color: var(--green); }
+.growth.down { color: var(--red); }
+.growth.flat { color: var(--text-soft); }
+
 /* progress bar */
 .bar {
   height: 7px;

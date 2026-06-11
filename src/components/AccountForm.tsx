@@ -107,6 +107,25 @@ export function AccountForm({ conta, onSalvar, onFechar }: Props) {
             </Campo>
           </div>
 
+          <div className="form-grid">
+            <Campo label="Faturamento mês anterior (para cálculo de crescimento)">
+              <input
+                type="number"
+                className="control"
+                min={0}
+                value={form.faturamento_mes_anterior ?? ''}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    faturamento_mes_anterior: e.target.value === '' ? undefined : Number(e.target.value),
+                  }))
+                }
+                placeholder="Deixe vazio se não houver"
+              />
+            </Campo>
+            <span />
+          </div>
+
           {form.tipo === 'lojista_digital' && (
             <div className="form-grid">
               <Campo label="Meta de vendas (60 dias)">

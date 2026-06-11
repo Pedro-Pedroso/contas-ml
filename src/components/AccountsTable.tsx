@@ -1,10 +1,11 @@
 import { useState, useRef, type ChangeEvent } from 'react'
 import { Account } from '../types'
-import { Icon, Avatar, Bar } from './Primitives'
+import { Icon, Avatar, Bar, Growth } from './Primitives'
 import {
   calcPercentualMeta,
   calcPercentualVendas,
   calcMesesRestantes,
+  calcCrescimento,
   formatarData,
   formatarMoeda,
   isContaInicial,
@@ -161,6 +162,7 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
               const inicial = isContaInicial(conta)
               const isLoja = conta.tipo === 'lojista_digital' && (conta.meta_vendas ?? 0) > 0
               const cor    = p >= 80 ? 'green' : p >= 50 ? 'amber' : 'red'
+              const crescimento = calcCrescimento(conta)
 
               return (
                 <tr key={conta.id} className={conta.em_risco ? 'is-risk' : ''}>
@@ -209,6 +211,7 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
                           <span className="ml-v">
                             {formatarMoeda(conta.faturamento_real)}{' '}
                             <i>/ {formatarMoeda(conta.meta_faturamento)}</i>
+                            {' '}<Growth crescimento={crescimento} />
                           </span>
                         </div>
                         <div className="meta-line">
@@ -226,7 +229,10 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
                     ) : (
                       <>
                         <div className="meta-figs">
-                          <span className="meta-real">{formatarMoeda(conta.faturamento_real)}</span>
+                          <span className="meta-real">
+                            {formatarMoeda(conta.faturamento_real)}{' '}
+                            <Growth crescimento={crescimento} />
+                          </span>
                           <span className="meta-goal">/ {formatarMoeda(conta.meta_faturamento)}</span>
                         </div>
                         <Bar pct={p} />

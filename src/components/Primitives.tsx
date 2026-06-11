@@ -81,6 +81,21 @@ export function Bar({ pct }: BarProps) {
   )
 }
 
+// Indicador de crescimento vs mês anterior (▲ +12% / ▼ −5%)
+interface GrowthProps { crescimento: number | null }
+export function Growth({ crescimento }: GrowthProps) {
+  if (crescimento === null) return null
+  const pct = Math.round(crescimento)
+  const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat'
+  const seta = pct > 0 ? '▲' : pct < 0 ? '▼' : '＝'
+  const sinal = pct > 0 ? '+' : ''
+  return (
+    <span className={`growth ${cls}`} title="Variação vs mês anterior">
+      {seta} {sinal}{pct}%
+    </span>
+  )
+}
+
 // Tag de status para o hero
 interface StatusTagProps { pct: number }
 export function StatusTag({ pct }: StatusTagProps) {

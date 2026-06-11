@@ -24,6 +24,13 @@ export function calcPercentualMeta(conta: Account): number {
   return pctFat
 }
 
+/** Crescimento % do faturamento vs mês anterior. Null se não há dado do mês anterior. */
+export function calcCrescimento(conta: Account): number | null {
+  const anterior = conta.faturamento_mes_anterior
+  if (anterior == null || anterior === 0) return null
+  return ((conta.faturamento_real / anterior) - 1) * 100
+}
+
 /** True se a conta tem até 60 dias desde data_inicio (ainda em fase inicial) */
 export function isContaInicial(conta: Account): boolean {
   const inicio = new Date(conta.data_inicio)
@@ -76,9 +83,15 @@ export function calcMetricasPorAssessor(contas: Account[]) {
     const iniciais = contasAssessor.filter(isContaInicial).length
 
     const rampadas = contasAssessor.filter((c) => !isContaInicial(c)).length
-    const metaBatida = contasAssessor
-      .filter((c) => !isContaInicial(c) && calcPercentualMeta(c) >= 100).length
     const emRisco = contasAssessor.filter((c) => c.em_risco).length
+
+    // Média simples dos crescimentos (contas com dado do mês anterior)
+    const crescimentos = contasAssessor
+      .map(calcCrescimento)
+      .filter((g): g is number => g !== null)
+    const mediaCrescimento = crescimentos.length > 0
+      ? crescimentos.reduce((acc, g) => acc + g, 0) / crescimentos.length
+      : null
 
     return {
       assessor,
@@ -88,7 +101,7 @@ export function calcMetricasPorAssessor(contas: Account[]) {
       rampadas,
       mediaAtingimento,
       gmvTotal,
-      metaBatida,
+      mediaCrescimento,
       emRisco,
     }
   }).sort((a, b) => a.assessor.localeCompare(b.assessor))

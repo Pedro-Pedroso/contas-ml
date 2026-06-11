@@ -75,9 +75,27 @@ function AdvisorCard({ row, defaultOpen }: AdvisorCardProps) {
           <div className="v gmv">{BRLk(row.gmvTotal)}</div>
         </div>
         <div className="ac-stat">
-          <div className="l">Metas batidas</div>
-          <div className="v">
-            {row.metaBatida}<span className="u">/ {row.rampadas}</span>
+          <div className="l">Cresc. médio</div>
+          <div
+            className="v"
+            style={{
+              color: row.mediaCrescimento == null
+                ? 'var(--text-soft)'
+                : row.mediaCrescimento > 0 ? 'var(--green)'
+                : row.mediaCrescimento < 0 ? 'var(--red)'
+                : 'var(--text)',
+            }}
+            title="Média simples do crescimento de faturamento vs mês anterior"
+          >
+            {row.mediaCrescimento == null ? (
+              '—'
+            ) : (
+              <>
+                {row.mediaCrescimento > 0 ? '+' : ''}
+                {row.mediaCrescimento.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
+                <span className="u">%</span>
+              </>
+            )}
           </div>
         </div>
       </div>
