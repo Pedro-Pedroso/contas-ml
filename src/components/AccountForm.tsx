@@ -15,7 +15,7 @@ const VAZIO: Omit<Account, 'id'> = {
   data_inicio: '',
   data_termino: '',
   meta_faturamento: 0,
-  faturamento_real: 0,
+  faturamento_30d: 0,
   em_risco: false,
   status: 'ativo',
   observacao: '',
@@ -102,40 +102,27 @@ export function AccountForm({ conta, onSalvar, onFechar }: Props) {
             <Campo label={form.tipo === 'lojista_digital' ? 'Meta de faturamento (60 dias)' : 'Meta de faturamento mensal'}>
               <input type="number" className="control" required min={0} value={form.meta_faturamento} onChange={set('meta_faturamento')} />
             </Campo>
-            <Campo label={form.tipo === 'lojista_digital' ? 'Faturamento real (60 dias)' : 'Faturamento real'}>
-              <input type="number" className="control" required min={0} value={form.faturamento_real} onChange={set('faturamento_real')} />
-            </Campo>
+            <span />
           </div>
 
           <div className="form-grid">
-            <Campo label="Faturamento mês anterior (fechado)">
-              <input
-                type="number"
-                className="control"
-                min={0}
-                value={form.faturamento_mes_anterior ?? ''}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    faturamento_mes_anterior: e.target.value === '' ? undefined : Number(e.target.value),
-                  }))
-                }
-                placeholder="Deixe vazio se não houver"
-              />
+            <Campo label="Faturamento últimos 30 dias (painel ML)">
+              <input type="number" className="control" required min={0} value={form.faturamento_30d} onChange={set('faturamento_30d')} />
             </Campo>
-            <Campo label="Faturamento mês retrasado (fechado)">
+            <Campo label="Faturamento últimos 60 dias (painel ML)">
               <input
                 type="number"
                 className="control"
                 min={0}
-                value={form.faturamento_mes_retrasado ?? ''}
+                required={form.tipo === 'lojista_digital'}
+                value={form.faturamento_60d ?? ''}
                 onChange={(e) =>
                   setForm((prev) => ({
                     ...prev,
-                    faturamento_mes_retrasado: e.target.value === '' ? undefined : Number(e.target.value),
+                    faturamento_60d: e.target.value === '' ? undefined : Number(e.target.value),
                   }))
                 }
-                placeholder="Para cálculo de crescimento"
+                placeholder={form.tipo === 'lojista_digital' ? 'Meta do lojista + crescimento' : 'Usado no cálculo de crescimento'}
               />
             </Campo>
           </div>

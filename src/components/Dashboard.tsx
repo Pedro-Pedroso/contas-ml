@@ -10,6 +10,7 @@ import { useAccounts } from '../hooks/useAccounts'
 import {
   formatarMoeda,
   calcMediaAtingimento,
+  faturamentoConsiderado,
   isContaInicial,
   calcEncerrandoEm60Dias,
 } from '../utils/calculations'
@@ -156,7 +157,7 @@ interface CarteiraProps {
 
 function CarteiraScreen({ contas, contasAtivas, onEditar, onExcluir, onImportar, onToast }: CarteiraProps) {
   const metaTotal   = contasAtivas.reduce((s, c) => s + c.meta_faturamento, 0)
-  const realTotal   = contasAtivas.reduce((s, c) => s + c.faturamento_real, 0)
+  const realTotal   = contasAtivas.reduce((s, c) => s + faturamentoConsiderado(c), 0)
   const atingGlobal = metaTotal > 0 ? Math.round((realTotal / metaTotal) * 100) : 0
   const saldo       = realTotal - metaTotal
   const emRisco     = contasAtivas.filter((c) => c.em_risco).length

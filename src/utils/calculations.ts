@@ -8,13 +8,18 @@ export function calcPercentualVendas(conta: Account): number {
   return Math.round(((conta.vendas_reais ?? 0) / conta.meta_vendas) * 100)
 }
 
+/** Faturamento que conta contra a meta: lojista = últimos 60 dias, mensalista = últimos 30 */
+export function faturamentoConsiderado(conta: Account): number {
+  return conta.tipo === 'lojista_digital' ? (conta.faturamento_60d ?? 0) : conta.faturamento_30d
+}
+
 /** Percentual da meta atingido — lojistas usam 50% capped por métrica.
  *  Cada indicador contribui no máximo 50 pts; exceder a meta não compensa o outro.
  *  Ex: fat 27% + pedidos 152% → 13,5 + 50 = 64% (não 90% como na média simples). */
 export function calcPercentualMeta(conta: Account): number {
   const pctFat = conta.meta_faturamento === 0
     ? 0
-    : Math.round((conta.faturamento_real / conta.meta_faturamento) * 100)
+    : Math.round((faturamentoConsiderado(conta) / conta.meta_faturamento) * 100)
 
   if (conta.tipo === 'lojista_digital' && conta.meta_vendas && conta.meta_vendas > 0) {
     const pctVendas = calcPercentualVendas(conta)
@@ -24,22 +29,17 @@ export function calcPercentualMeta(conta: Account): number {
   return pctFat
 }
 
-/** Crescimento % entre os dois últimos meses FECHADOS (mês anterior vs retrasado).
- *  Compara períodos completos — o mês corrente parcial nunca entra na conta. */
+/** Crescimento % por janela móvel: últimos 30 dias vs os 30 anteriores.
+ *  Os 30 anteriores são derivados de 60d − 30d (ambos lidos do painel ML).
+ *  Null se falta dado, ou se a conta é inicial (janela anterior precede o início). */
 export function calcCrescimento(conta: Account): number | null {
-  const anterior = conta.faturamento_mes_anterior
-  const retrasado = conta.faturamento_mes_retrasado
-  if (anterior == null || retrasado == null || retrasado === 0) return null
-  return ((anterior / retrasado) - 1) * 100
-}
-
-/** Nomes abreviados dos dois meses fechados comparados (ex.: { anterior: 'mai', retrasado: 'abr' }) */
-export function nomesMesesComparacao(): { anterior: string; retrasado: string } {
-  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
-  const hoje = new Date()
-  const ant = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1)
-  const ret = new Date(hoje.getFullYear(), hoje.getMonth() - 2, 1)
-  return { anterior: MESES[ant.getMonth()], retrasado: MESES[ret.getMonth()] }
+  const f30 = conta.faturamento_30d
+  const f60 = conta.faturamento_60d
+  if (f60 == null || f30 <= 0) return null
+  const anteriores30 = f60 - f30
+  if (anteriores30 <= 0) return null
+  if (isContaInicial(conta)) return null
+  return ((f30 / anteriores30) - 1) * 100
 }
 
 /** True se a conta tem até 60 dias desde data_inicio (ainda em fase inicial) */
@@ -90,13 +90,13 @@ export function calcMetricasPorAssessor(contas: Account[]) {
     const mediaAtingimento = contasRampadas.length === 0
       ? null
       : Math.round(contasRampadas.reduce((acc, c) => acc + calcPercentualMeta(c), 0) / contasRampadas.length)
-    const gmvTotal = contasAssessor.reduce((acc, c) => acc + c.faturamento_real, 0)
+    const gmvTotal = contasAssessor.reduce((acc, c) => acc + faturamentoConsiderado(c), 0)
     const iniciais = contasAssessor.filter(isContaInicial).length
 
     const rampadas = contasAssessor.filter((c) => !isContaInicial(c)).length
     const emRisco = contasAssessor.filter((c) => c.em_risco).length
 
-    // Média simples dos crescimentos (contas com dado do mês anterior)
+    // Média simples dos crescimentos (contas com as duas janelas preenchidas)
     const crescimentos = contasAssessor
       .map(calcCrescimento)
       .filter((g): g is number => g !== null)

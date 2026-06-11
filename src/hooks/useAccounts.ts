@@ -4,7 +4,7 @@ import { CONTAS_NOTION_V2 } from '../data/notionAccounts'
 
 const STORAGE_KEY = 'wxp_accounts'
 const STORAGE_VERSION_KEY = 'wxp_accounts_version'
-const DATASET_VERSION = 'notion-contas-v4-2026-06-10'
+const DATASET_VERSION = 'notion-contas-v5-janelas-2026-06-11'
 
 function carregarDoStorage(): Account[] {
   try {

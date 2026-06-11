@@ -6,6 +6,7 @@ import {
   calcPercentualVendas,
   calcMesesRestantes,
   calcCrescimento,
+  faturamentoConsiderado,
   formatarData,
   formatarMoeda,
   isContaInicial,
@@ -156,7 +157,7 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
               <tr><td colSpan={8} className="empty">Nenhuma conta para esse filtro.</td></tr>
             ) : sorted.map((conta) => {
               const p      = calcPercentualMeta(conta)
-              const pFat   = conta.meta_faturamento === 0 ? 0 : Math.round((conta.faturamento_real / conta.meta_faturamento) * 100)
+              const pFat   = conta.meta_faturamento === 0 ? 0 : Math.round((faturamentoConsiderado(conta) / conta.meta_faturamento) * 100)
               const pVend  = calcPercentualVendas(conta)
               const meses  = calcMesesRestantes(conta.data_termino)
               const inicial = isContaInicial(conta)
@@ -207,9 +208,9 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
                     {isLoja ? (
                       <div className="meta-loja">
                         <div className="meta-line">
-                          <span className="ml-k">Faturamento</span>
+                          <span className="ml-k">Fat. 60 dias</span>
                           <span className="ml-v">
-                            {formatarMoeda(conta.faturamento_real)}{' '}
+                            {formatarMoeda(conta.faturamento_60d ?? 0)}{' '}
                             <i>/ {formatarMoeda(conta.meta_faturamento)}</i>
                             {' '}<Growth crescimento={crescimento} />
                           </span>
@@ -229,8 +230,8 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
                     ) : (
                       <>
                         <div className="meta-figs">
-                          <span className="meta-real">
-                            {formatarMoeda(conta.faturamento_real)}{' '}
+                          <span className="meta-real" title="Faturamento dos últimos 30 dias">
+                            {formatarMoeda(conta.faturamento_30d)}{' '}
                             <Growth crescimento={crescimento} />
                           </span>
                           <span className="meta-goal">/ {formatarMoeda(conta.meta_faturamento)}</span>

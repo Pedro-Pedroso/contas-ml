@@ -12,9 +12,8 @@ export interface Account {
   data_inicio: string   // YYYY-MM-DD
   data_termino: string  // YYYY-MM-DD
   meta_faturamento: number
-  faturamento_real: number
-  faturamento_mes_anterior?: number
-  faturamento_mes_retrasado?: number
+  faturamento_30d: number   // últimos 30 dias (painel ML)
+  faturamento_60d?: number  // últimos 60 dias (painel ML) — meta do lojista + crescimento
   meta_vendas?: number
   vendas_reais?: number
   em_risco: boolean
