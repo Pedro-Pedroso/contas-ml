@@ -71,13 +71,6 @@ export function Dashboard() {
     fecharForm()
   }
 
-  const handleExcluir = (id: string) => {
-    if (window.confirm('Confirmar exclusão desta conta?')) {
-      excluirConta(id)
-      exibirToast('Conta excluída.', 'sucesso')
-    }
-  }
-
   // Métricas para o topbar — computed from all contas
   const contasAtivas = contas.filter((c) => c.status === 'ativo')
 
@@ -120,7 +113,6 @@ export function Dashboard() {
               contas={contas}
               contasAtivas={contasAtivas}
               onEditar={abrirEditar}
-              onExcluir={handleExcluir}
               onImportar={importarContas}
               onToast={exibirToast}
             />
@@ -131,7 +123,22 @@ export function Dashboard() {
       </div>
 
       {formAberto && (
-        <AccountForm conta={contaEditando} onSalvar={handleSalvar} onFechar={fecharForm} />
+        <AccountForm
+          conta={contaEditando}
+          onSalvar={handleSalvar}
+          onFechar={fecharForm}
+          onExcluir={
+            contaEditando
+              ? () => {
+                  if (window.confirm(`Confirmar exclusão da conta "${contaEditando.nome_cliente}"?`)) {
+                    excluirConta(contaEditando.id)
+                    exibirToast('Conta excluída.', 'sucesso')
+                    fecharForm()
+                  }
+                }
+              : undefined
+          }
+        />
       )}
 
       <div className="toast-stack" aria-live="polite" aria-atomic="true">
@@ -150,12 +157,11 @@ interface CarteiraProps {
   contas: Account[]
   contasAtivas: Account[]
   onEditar: (c: Account) => void
-  onExcluir: (id: string) => void
   onImportar: (novas: Account[]) => void
   onToast: (msg: string, tipo: 'sucesso' | 'erro') => void
 }
 
-function CarteiraScreen({ contas, contasAtivas, onEditar, onExcluir, onImportar, onToast }: CarteiraProps) {
+function CarteiraScreen({ contas, contasAtivas, onEditar, onImportar, onToast }: CarteiraProps) {
   const metaTotal   = contasAtivas.reduce((s, c) => s + c.meta_faturamento, 0)
   const realTotal   = contasAtivas.reduce((s, c) => s + faturamentoConsiderado(c), 0)
   const atingGlobal = metaTotal > 0 ? Math.round((realTotal / metaTotal) * 100) : 0
@@ -234,7 +240,6 @@ function CarteiraScreen({ contas, contasAtivas, onEditar, onExcluir, onImportar,
       <AccountsTable
         contas={contas}
         onEditar={onEditar}
-        onExcluir={onExcluir}
         onImportar={onImportar}
         onToast={onToast}
       />

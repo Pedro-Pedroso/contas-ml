@@ -20,7 +20,6 @@ type SortDir = 'asc' | 'desc'
 interface Props {
   contas: Account[]
   onEditar: (conta: Account) => void
-  onExcluir: (id: string) => void
   onImportar: (novasContas: Account[]) => void
   onToast: (msg: string, tipo: 'sucesso' | 'erro') => void
 }
@@ -32,7 +31,7 @@ function prazoTexto(meses: number): string {
   return `${meses} meses restantes`
 }
 
-export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast }: Props) {
+export function AccountsTable({ contas, onEditar, onImportar, onToast }: Props) {
   const inputCSV = useRef<HTMLInputElement>(null)
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<Filtro>('todas')
@@ -271,7 +270,8 @@ export function AccountsTable({ contas, onEditar, onExcluir, onImportar, onToast
                   <td>
                     <button
                       className="row-act"
-                      title={`Editar ${conta.nome_cliente}`}
+                      title={`Editar ou excluir ${conta.nome_cliente}`}
+                      aria-label={`Editar ou excluir ${conta.nome_cliente}`}
                       onClick={() => onEditar(conta)}
                     >
                       <Icon name="dots" size={18} />

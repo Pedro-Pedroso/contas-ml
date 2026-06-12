@@ -5,6 +5,7 @@ interface Props {
   conta?: Account | null
   onSalvar: (dados: Omit<Account, 'id'>) => void
   onFechar: () => void
+  onExcluir?: () => void
 }
 
 const VAZIO: Omit<Account, 'id'> = {
@@ -21,7 +22,7 @@ const VAZIO: Omit<Account, 'id'> = {
   observacao: '',
 }
 
-export function AccountForm({ conta, onSalvar, onFechar }: Props) {
+export function AccountForm({ conta, onSalvar, onFechar, onExcluir }: Props) {
   const [form, setForm] = useState<Omit<Account, 'id'>>(VAZIO)
 
   useEffect(() => {
@@ -165,12 +166,19 @@ export function AccountForm({ conta, onSalvar, onFechar }: Props) {
           </Campo>
 
           <div className="form-actions">
-            <button type="button" onClick={onFechar} className="button button-secondary">
-              Cancelar
-            </button>
-            <button type="submit" className="button button-primary">
-              {conta ? 'Salvar alterações' : 'Cadastrar conta'}
-            </button>
+            {conta && onExcluir && (
+              <button type="button" className="button button-danger" onClick={onExcluir}>
+                Excluir conta
+              </button>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+              <button type="button" onClick={onFechar} className="button button-secondary">
+                Cancelar
+              </button>
+              <button type="submit" className="button button-primary">
+                {conta ? 'Salvar alterações' : 'Cadastrar conta'}
+              </button>
+            </div>
           </div>
         </form>
       </section>
