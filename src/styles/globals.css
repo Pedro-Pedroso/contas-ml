@@ -1035,6 +1035,65 @@ table.accounts {
 .button-danger:hover:not(:disabled) { background: rgba(224,104,108,0.24); }
 
 /* ============================================================
+   Login
+   ============================================================ */
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-card {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.login-brand .brand-name { display: block; font-family: var(--display); font-size: 20px; font-weight: 600; }
+.login-brand .brand-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-soft);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.login-erro {
+  font-size: 13px;
+  color: var(--red);
+  background: var(--red-bg);
+  border: 1px solid var(--red-line);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+}
+.login-btn { width: 100%; min-height: 42px; }
+.login-hint { font-size: 11.5px; color: var(--text-soft); text-align: center; }
+
+.nav-logout {
+  margin-left: auto;
+  width: 30px; height: 30px;
+  flex: 0 0 30px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  color: var(--text-soft);
+  transition: background .14s, color .14s;
+}
+.nav-logout:hover { background: var(--surface); color: var(--red); }
+.nav.collapsed .nav-logout { opacity: 0; pointer-events: none; }
+
+/* ============================================================
    Toast
    ============================================================ */
 .toast-stack {

@@ -29,7 +29,7 @@ function formatarMoedaK(valor: number): string {
 }
 
 export function Dashboard() {
-  const { contas, adicionarConta, editarConta, excluirConta, importarContas } = useAccounts()
+  const { contas, carregando, adicionarConta, editarConta, excluirConta, importarContas } = useAccounts()
   const [screen, setScreen] = useState<Screen>(
     () => (localStorage.getItem('contas.screen') as Screen) || 'carteira'
   )
@@ -108,7 +108,9 @@ export function Dashboard() {
         </header>
 
         <div className="content">
-          {screen === 'carteira' ? (
+          {carregando ? (
+            <div className="empty">Carregando contas…</div>
+          ) : screen === 'carteira' ? (
             <CarteiraScreen
               contas={contas}
               contasAtivas={contasAtivas}

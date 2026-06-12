@@ -1,5 +1,6 @@
-import { Icon } from './Primitives'
-import { Avatar } from './Primitives'
+import { useState, useEffect } from 'react'
+import { Icon, Avatar } from './Primitives'
+import { supabase } from '../lib/supabase'
 
 type Screen = 'carteira' | 'time'
 
@@ -11,6 +12,14 @@ interface Props {
 }
 
 export function Sidebar({ screen, onNavigate, collapsed, onToggle }: Props) {
+  const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setEmail(data.user?.email ?? '')
+    })
+  }, [])
+
   const items: { id: Screen; label: string; icon: Parameters<typeof Icon>[0]['name'] }[] = [
     { id: 'carteira', label: 'Carteira', icon: 'wallet' },
     { id: 'time',     label: 'Time',     icon: 'team'   },
@@ -64,11 +73,19 @@ export function Sidebar({ screen, onNavigate, collapsed, onToggle }: Props) {
       </button>
 
       <div className="nav-user">
-        <Avatar name="Diego Martins" size={34} />
+        <Avatar name={email || 'Usuário'} size={34} />
         <span className="meta">
-          <b>Diego Martins</b>
+          <b>{email || 'Conectado'}</b>
           <span>Head de carteira</span>
         </span>
+        <button
+          className="nav-logout"
+          title="Sair"
+          aria-label="Sair da conta"
+          onClick={() => supabase.auth.signOut()}
+        >
+          <Icon name="logout" size={16} />
+        </button>
       </div>
     </nav>
   )

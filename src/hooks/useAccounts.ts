@@ -1,70 +1,129 @@
-import { useState, useCallback } from 'react'
-import { Account } from '../types'
-import { CONTAS_NOTION_V2 } from '../data/notionAccounts'
+import { useState, useEffect, useCallback } from 'react'
+import { Account, TipoConta, StatusConta } from '../types'
+import { supabase } from '../lib/supabase'
 
-const STORAGE_KEY = 'wxp_accounts'
-const STORAGE_VERSION_KEY = 'wxp_accounts_version'
-const DATASET_VERSION = 'notion-contas-v5-janelas-2026-06-11'
-
-function carregarDoStorage(): Account[] {
-  try {
-    const savedVersion = localStorage.getItem(STORAGE_VERSION_KEY)
-    const salvo = localStorage.getItem(STORAGE_KEY)
-
-    if (salvo && savedVersion === DATASET_VERSION) {
-      return JSON.parse(salvo) as Account[]
-    }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(CONTAS_NOTION_V2))
-    localStorage.setItem(STORAGE_VERSION_KEY, DATASET_VERSION)
-  } catch {
-    /* ignora erros de storage/parse */
-  }
-
-  return CONTAS_NOTION_V2
+// Linha da tabela `contas` no Supabase (numeric pode chegar como string)
+interface ContaRow {
+  id: string
+  nome_cliente: string
+  assessor: string
+  tipo: string
+  estrela: boolean
+  data_inicio: string | null
+  data_termino: string | null
+  meta_faturamento: number | string
+  faturamento_30d: number | string
+  faturamento_60d: number | string | null
+  meta_vendas: number | string | null
+  vendas_reais: number | string | null
+  em_risco: boolean
+  status: string
+  observacao: string | null
 }
 
-function salvarNoStorage(contas: Account[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(contas))
-  localStorage.setItem(STORAGE_VERSION_KEY, DATASET_VERSION)
+const numOpcional = (v: number | string | null): number | undefined =>
+  v == null ? undefined : Number(v)
+
+function rowToAccount(r: ContaRow): Account {
+  return {
+    id: r.id,
+    nome_cliente: r.nome_cliente,
+    assessor: r.assessor,
+    tipo: r.tipo as TipoConta,
+    estrela: r.estrela,
+    data_inicio: r.data_inicio ?? '',
+    data_termino: r.data_termino ?? '',
+    meta_faturamento: Number(r.meta_faturamento ?? 0),
+    faturamento_30d: Number(r.faturamento_30d ?? 0),
+    ...(r.faturamento_60d != null ? { faturamento_60d: Number(r.faturamento_60d) } : {}),
+    ...(r.meta_vendas != null ? { meta_vendas: Number(r.meta_vendas) } : {}),
+    ...(r.vendas_reais != null ? { vendas_reais: Number(r.vendas_reais) } : {}),
+    em_risco: r.em_risco,
+    status: r.status as StatusConta,
+    observacao: r.observacao ?? '',
+  }
+}
+
+function accountToRow(c: Account): ContaRow {
+  return {
+    id: c.id,
+    nome_cliente: c.nome_cliente,
+    assessor: c.assessor,
+    tipo: c.tipo,
+    estrela: c.estrela,
+    data_inicio: c.data_inicio || null,   // coluna date rejeita string vazia
+    data_termino: c.data_termino || null,
+    meta_faturamento: c.meta_faturamento,
+    faturamento_30d: c.faturamento_30d,
+    faturamento_60d: c.faturamento_60d ?? null,
+    meta_vendas: c.meta_vendas ?? null,
+    vendas_reais: c.vendas_reais ?? null,
+    em_risco: c.em_risco,
+    status: c.status,
+    observacao: c.observacao ?? '',
+  }
 }
 
 export function useAccounts() {
-  const [contas, setContas] = useState<Account[]>(carregarDoStorage)
+  const [contas, setContas] = useState<Account[]>([])
+  const [carregando, setCarregando] = useState(true)
 
-  const salvar = useCallback((novasContas: Account[]) => {
-    setContas(novasContas)
-    salvarNoStorage(novasContas)
+  useEffect(() => {
+    let ativo = true
+    supabase
+      .from('contas')
+      .select('*')
+      .order('nome_cliente')
+      .then(({ data, error }) => {
+        if (!ativo) return
+        if (error) {
+          console.error('Erro ao carregar contas:', error)
+          window.alert(`Erro ao carregar contas: ${error.message}`)
+        } else {
+          setContas(((data ?? []) as ContaRow[]).map(rowToAccount))
+        }
+        setCarregando(false)
+      })
+    return () => { ativo = false }
   }, [])
 
-  const adicionarConta = useCallback(
-    (dados: Omit<Account, 'id'>) => {
-      const nova: Account = { ...dados, id: crypto.randomUUID() }
-      salvar([...contas, nova])
-    },
-    [contas, salvar]
-  )
+  const adicionarConta = useCallback(async (dados: Omit<Account, 'id'>) => {
+    const nova: Account = { ...dados, id: crypto.randomUUID() }
+    const { error } = await supabase.from('contas').insert(accountToRow(nova))
+    if (error) {
+      window.alert(`Erro ao salvar conta: ${error.message}`)
+      return
+    }
+    setContas((prev) => [...prev, nova])
+  }, [])
 
-  const editarConta = useCallback(
-    (id: string, dados: Omit<Account, 'id'>) => {
-      salvar(contas.map((conta) => (conta.id === id ? { ...dados, id } : conta)))
-    },
-    [contas, salvar]
-  )
+  const editarConta = useCallback(async (id: string, dados: Omit<Account, 'id'>) => {
+    const conta: Account = { ...dados, id }
+    const { error } = await supabase.from('contas').update(accountToRow(conta)).eq('id', id)
+    if (error) {
+      window.alert(`Erro ao atualizar conta: ${error.message}`)
+      return
+    }
+    setContas((prev) => prev.map((c) => (c.id === id ? conta : c)))
+  }, [])
 
-  const excluirConta = useCallback(
-    (id: string) => {
-      salvar(contas.filter((conta) => conta.id !== id))
-    },
-    [contas, salvar]
-  )
+  const excluirConta = useCallback(async (id: string) => {
+    const { error } = await supabase.from('contas').delete().eq('id', id)
+    if (error) {
+      window.alert(`Erro ao excluir conta: ${error.message}`)
+      return
+    }
+    setContas((prev) => prev.filter((c) => c.id !== id))
+  }, [])
 
-  const importarContas = useCallback(
-    (novasContas: Account[]) => {
-      salvar(novasContas)
-    },
-    [salvar]
-  )
+  const importarContas = useCallback(async (novasContas: Account[]) => {
+    const { error } = await supabase.from('contas').upsert(novasContas.map(accountToRow))
+    if (error) {
+      window.alert(`Erro ao importar contas: ${error.message}`)
+      return
+    }
+    setContas(novasContas)
+  }, [])
 
-  return { contas, adicionarConta, editarConta, excluirConta, importarContas }
+  return { contas, carregando, adicionarConta, editarConta, excluirConta, importarContas }
 }

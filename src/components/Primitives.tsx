@@ -2,7 +2,7 @@
 
 type IconName =
   | 'wallet' | 'team' | 'history' | 'settings' | 'chevrons' | 'chevron'
-  | 'search' | 'plus' | 'star' | 'alert' | 'dots' | 'download'
+  | 'search' | 'plus' | 'star' | 'alert' | 'dots' | 'download' | 'logout'
 
 interface IconProps { name: IconName; size?: number; className?: string }
 
@@ -42,6 +42,8 @@ export function Icon({ name, size = 18, className = '' }: IconProps) {
       return <svg {...p}><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
     case 'download':
       return <svg {...p} width={16} height={16}><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+    case 'logout':
+      return <svg {...p} width={16} height={16}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
     default:
       return null
   }
