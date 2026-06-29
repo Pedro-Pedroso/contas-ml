@@ -4,18 +4,12 @@ import { Icon, Avatar, Bar } from './Primitives'
 import {
   calcMetricasPorAssessor,
   calcPercentualMeta,
-  formatarMoeda,
+  faixaPct,
+  formatarMoedaK,
   isContaInicial,
 } from '../utils/calculations'
 
 interface Props { contas: Account[] }
-
-function BRLk(valor: number): string {
-  if (Math.abs(valor) >= 1000) {
-    return 'R$ ' + (valor / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'k'
-  }
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
-}
 
 interface AdvisorCardProps {
   row: ReturnType<typeof calcMetricasPorAssessor>[number] & { rank: number }
@@ -25,15 +19,9 @@ interface AdvisorCardProps {
 function AdvisorCard({ row, defaultOpen }: AdvisorCardProps) {
   const [open, setOpen] = useState(defaultOpen)
 
-  const aColor = row.mediaAtingimento == null
-    ? 'var(--text-soft)'
-    : row.mediaAtingimento >= 80 ? 'var(--green)'
-    : row.mediaAtingimento >= 50 ? 'var(--amber)'
-    : 'var(--red)'
-  const aClass = row.mediaAtingimento == null ? ''
-    : row.mediaAtingimento >= 80 ? 'is-green'
-    : row.mediaAtingimento >= 50 ? 'is-amber'
-    : 'is-red'
+  const faixaAting = row.mediaAtingimento == null ? null : faixaPct(row.mediaAtingimento)
+  const aColor = faixaAting == null ? 'var(--text-soft)' : `var(--${faixaAting})`
+  const aClass = faixaAting == null ? '' : `is-${faixaAting}`
 
   const contasOrdenadas = [...row.contas].sort(
     (a, b) => calcPercentualMeta(b) - calcPercentualMeta(a)
@@ -72,7 +60,7 @@ function AdvisorCard({ row, defaultOpen }: AdvisorCardProps) {
         </div>
         <div className="ac-stat">
           <div className="l">GMV gerido</div>
-          <div className="v gmv">{BRLk(row.gmvTotal)}</div>
+          <div className="v gmv">{formatarMoedaK(row.gmvTotal)}</div>
         </div>
         <div className="ac-stat">
           <div className="l">Cresc. médio</div>
@@ -137,7 +125,7 @@ function AdvisorCard({ row, defaultOpen }: AdvisorCardProps) {
             {contasOrdenadas.map((conta) => {
               const p = calcPercentualMeta(conta)
               const inicial = isContaInicial(conta)
-              const cor = p >= 80 ? 'is-green' : p >= 50 ? 'is-amber' : 'is-red'
+              const cor = `is-${faixaPct(p)}`
               return (
                 <div className={`mini-row${inicial ? ' inicial' : ''}`} key={conta.id}>
                   <div className="mini-cli">
@@ -184,7 +172,7 @@ export function AdvisorView({ contas }: Props) {
         <div>
           <h2>Time de assessores</h2>
           <p>
-            {ranked.length} assessore{ranked.length !== 1 ? 's' : ''} · {BRLk(totalGmv)} sob gestão · ordenados por atingimento
+            {ranked.length} assessore{ranked.length !== 1 ? 's' : ''} · {formatarMoedaK(totalGmv)} sob gestão · ordenados por atingimento
           </p>
         </div>
       </div>

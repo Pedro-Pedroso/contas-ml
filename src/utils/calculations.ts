@@ -13,13 +13,17 @@ export function faturamentoConsiderado(conta: Account): number {
   return conta.tipo === 'lojista_digital' ? (conta.faturamento_60d ?? 0) : conta.faturamento_30d
 }
 
+/** Percentual da meta de faturamento atingido (sem o cap de 50% por métrica) */
+export function calcPercentualFaturamento(conta: Account): number {
+  if (conta.meta_faturamento === 0) return 0
+  return Math.round((faturamentoConsiderado(conta) / conta.meta_faturamento) * 100)
+}
+
 /** Percentual da meta atingido — lojistas usam 50% capped por métrica.
  *  Cada indicador contribui no máximo 50 pts; exceder a meta não compensa o outro.
  *  Ex: fat 27% + pedidos 152% → 13,5 + 50 = 64% (não 90% como na média simples). */
 export function calcPercentualMeta(conta: Account): number {
-  const pctFat = conta.meta_faturamento === 0
-    ? 0
-    : Math.round((faturamentoConsiderado(conta) / conta.meta_faturamento) * 100)
+  const pctFat = calcPercentualFaturamento(conta)
 
   if (conta.tipo === 'lojista_digital' && conta.meta_vendas && conta.meta_vendas > 0) {
     const pctVendas = calcPercentualVendas(conta)
@@ -118,11 +122,14 @@ export function calcMetricasPorAssessor(contas: Account[]) {
   }).sort((a, b) => a.assessor.localeCompare(b.assessor))
 }
 
-/** Cor do badge de % de meta */
-export function corPercentualMeta(percentual: number): string {
-  if (percentual >= 80) return 'var(--success)'
-  if (percentual >= 50) return 'var(--warning)'
-  return 'var(--danger)'
+/** Faixa de status por percentual atingido — base única para cores e classes.
+ *  >= 80 verde · >= 50 âmbar · senão vermelho.
+ *  Use com `var(--${faixaPct(p)})` (cor) ou `is-${faixaPct(p)}` (classe). */
+export type FaixaStatus = 'green' | 'amber' | 'red'
+export function faixaPct(percentual: number): FaixaStatus {
+  if (percentual >= 80) return 'green'
+  if (percentual >= 50) return 'amber'
+  return 'red'
 }
 
 /** Formata data YYYY-MM-DD para dd/mm/aaaa */
@@ -135,4 +142,13 @@ export function formatarData(data: string): string {
 /** Formata número como moeda brasileira */
 export function formatarMoeda(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+/** Moeda compacta: valores >= 1000 viram "R$ 37,5k"; abaixo disso, moeda cheia sem centavos */
+export function formatarMoedaK(valor: number): string {
+  if (Math.abs(valor) >= 1000) {
+    const k = (valor / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+    return `R$ ${k}k`
+  }
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }

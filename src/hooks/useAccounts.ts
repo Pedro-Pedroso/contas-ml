@@ -67,6 +67,8 @@ function accountToRow(c: Account): ContaRow {
 export function useAccounts() {
   const [contas, setContas] = useState<Account[]>([])
   const [carregando, setCarregando] = useState(true)
+  // Erro da carga inicial; a UI decide como exibir (toast). Mutações retornam o erro diretamente.
+  const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
     let ativo = true
@@ -77,8 +79,7 @@ export function useAccounts() {
       .then(({ data, error }) => {
         if (!ativo) return
         if (error) {
-          console.error('Erro ao carregar contas:', error)
-          window.alert(`Erro ao carregar contas: ${error.message}`)
+          setErro(`Erro ao carregar contas: ${error.message}`)
         } else {
           setContas(((data ?? []) as ContaRow[]).map(rowToAccount))
         }
@@ -87,43 +88,35 @@ export function useAccounts() {
     return () => { ativo = false }
   }, [])
 
-  const adicionarConta = useCallback(async (dados: Omit<Account, 'id'>) => {
+  const adicionarConta = useCallback(async (dados: Omit<Account, 'id'>): Promise<string | null> => {
     const nova: Account = { ...dados, id: crypto.randomUUID() }
     const { error } = await supabase.from('contas').insert(accountToRow(nova))
-    if (error) {
-      window.alert(`Erro ao salvar conta: ${error.message}`)
-      return
-    }
+    if (error) return `Erro ao salvar conta: ${error.message}`
     setContas((prev) => [...prev, nova])
+    return null
   }, [])
 
-  const editarConta = useCallback(async (id: string, dados: Omit<Account, 'id'>) => {
+  const editarConta = useCallback(async (id: string, dados: Omit<Account, 'id'>): Promise<string | null> => {
     const conta: Account = { ...dados, id }
     const { error } = await supabase.from('contas').update(accountToRow(conta)).eq('id', id)
-    if (error) {
-      window.alert(`Erro ao atualizar conta: ${error.message}`)
-      return
-    }
+    if (error) return `Erro ao atualizar conta: ${error.message}`
     setContas((prev) => prev.map((c) => (c.id === id ? conta : c)))
+    return null
   }, [])
 
-  const excluirConta = useCallback(async (id: string) => {
+  const excluirConta = useCallback(async (id: string): Promise<string | null> => {
     const { error } = await supabase.from('contas').delete().eq('id', id)
-    if (error) {
-      window.alert(`Erro ao excluir conta: ${error.message}`)
-      return
-    }
+    if (error) return `Erro ao excluir conta: ${error.message}`
     setContas((prev) => prev.filter((c) => c.id !== id))
+    return null
   }, [])
 
-  const importarContas = useCallback(async (novasContas: Account[]) => {
+  const importarContas = useCallback(async (novasContas: Account[]): Promise<string | null> => {
     const { error } = await supabase.from('contas').upsert(novasContas.map(accountToRow))
-    if (error) {
-      window.alert(`Erro ao importar contas: ${error.message}`)
-      return
-    }
+    if (error) return `Erro ao importar contas: ${error.message}`
     setContas(novasContas)
+    return null
   }, [])
 
-  return { contas, carregando, adicionarConta, editarConta, excluirConta, importarContas }
+  return { contas, carregando, erro, adicionarConta, editarConta, excluirConta, importarContas }
 }

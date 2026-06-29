@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Account } from '../types'
 import { AccountsTable } from './AccountsTable'
 import { AccountForm } from './AccountForm'
@@ -9,7 +9,10 @@ import { Icon, StatusTag } from './Primitives'
 import { useAccounts } from '../hooks/useAccounts'
 import {
   formatarMoeda,
+  formatarMoedaK,
+  faixaPct,
   calcMediaAtingimento,
+  calcPercentualMeta,
   faturamentoConsiderado,
   isContaInicial,
   calcEncerrandoEm60Dias,
@@ -19,17 +22,8 @@ type Screen = 'carteira' | 'time'
 
 interface Toast { msg: string; tipo: 'sucesso' | 'erro'; id: number }
 
-function formatarMoedaK(valor: number): string {
-  const abs = Math.abs(valor)
-  if (abs >= 1000) {
-    const k = (valor / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
-    return `R$ ${k}k`
-  }
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
-}
-
 export function Dashboard() {
-  const { contas, carregando, adicionarConta, editarConta, excluirConta, importarContas } = useAccounts()
+  const { contas, carregando, erro, adicionarConta, editarConta, excluirConta, importarContas } = useAccounts()
   const [screen, setScreen] = useState<Screen>(
     () => (localStorage.getItem('contas.screen') as Screen) || 'carteira'
   )
@@ -56,18 +50,24 @@ export function Dashboard() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000)
   }, [])
 
+  // Erro de carga das contas → toast (mesmo canal das mutações)
+  useEffect(() => {
+    if (erro) exibirToast(erro, 'erro')
+  }, [erro, exibirToast])
+
   const abrirNova = () => { setContaEditando(null); setFormAberto(true) }
   const abrirEditar = (conta: Account) => { setContaEditando(conta); setFormAberto(true) }
   const fecharForm = () => { setFormAberto(false); setContaEditando(null) }
 
-  const handleSalvar = (dados: Omit<Account, 'id'>) => {
-    if (contaEditando) {
-      editarConta(contaEditando.id, dados)
-      exibirToast('Conta atualizada com sucesso.', 'sucesso')
-    } else {
-      adicionarConta(dados)
-      exibirToast('Conta cadastrada com sucesso.', 'sucesso')
+  const handleSalvar = async (dados: Omit<Account, 'id'>) => {
+    const erroMsg = contaEditando
+      ? await editarConta(contaEditando.id, dados)
+      : await adicionarConta(dados)
+    if (erroMsg) {
+      exibirToast(erroMsg, 'erro')
+      return
     }
+    exibirToast(contaEditando ? 'Conta atualizada com sucesso.' : 'Conta cadastrada com sucesso.', 'sucesso')
     fecharForm()
   }
 
@@ -131,9 +131,13 @@ export function Dashboard() {
           onFechar={fecharForm}
           onExcluir={
             contaEditando
-              ? () => {
+              ? async () => {
                   if (window.confirm(`Confirmar exclusão da conta "${contaEditando.nome_cliente}"?`)) {
-                    excluirConta(contaEditando.id)
+                    const erroMsg = await excluirConta(contaEditando.id)
+                    if (erroMsg) {
+                      exibirToast(erroMsg, 'erro')
+                      return
+                    }
                     exibirToast('Conta excluída.', 'sucesso')
                     fecharForm()
                   }
@@ -159,7 +163,7 @@ interface CarteiraProps {
   contas: Account[]
   contasAtivas: Account[]
   onEditar: (c: Account) => void
-  onImportar: (novas: Account[]) => void
+  onImportar: (novas: Account[]) => Promise<string | null>
   onToast: (msg: string, tipo: 'sucesso' | 'erro') => void
 }
 
@@ -172,15 +176,12 @@ function CarteiraScreen({ contas, contasAtivas, onEditar, onImportar, onToast }:
   const atingMedio  = calcMediaAtingimento(contas)
   const iniciais    = contasAtivas.filter(isContaInicial).length
   const rampadas    = contasAtivas.filter((c) => !isContaInicial(c))
-  const metaBatida  = rampadas.filter((c) => {
-    const p = calcPercentualMetaLocal(c)
-    return p >= 100
-  }).length
+  const metaBatida  = rampadas.filter((c) => calcPercentualMeta(c) >= 100).length
   const prazosCriticos = calcEncerrandoEm60Dias(contas).length
   const estrela     = contas.filter((c) => c.estrela).length
 
-  const heroColor = atingGlobal >= 80 ? 'green' : atingGlobal >= 50 ? 'amber' : 'red'
-  const heroStyle = heroColor === 'green' ? 'var(--green)' : heroColor === 'amber' ? 'var(--amber)' : 'var(--red)'
+  const heroColor = faixaPct(atingGlobal)
+  const heroStyle = `var(--${heroColor})`
 
   return (
     <div className="screen">
@@ -248,9 +249,6 @@ function CarteiraScreen({ contas, contasAtivas, onEditar, onImportar, onToast }:
     </div>
   )
 }
-
-// helper local (evita importar do utils só pra esta tela)
-import { calcPercentualMeta as calcPercentualMetaLocal } from '../utils/calculations'
 
 // ---- Tela 2: Time ----
 function TimeScreen({ contas }: { contas: Account[] }) {

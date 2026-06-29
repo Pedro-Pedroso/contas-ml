@@ -1,5 +1,7 @@
 // Strip secundária — 5 células com indicadores de segundo nível
 
+import { faixaPct } from '../utils/calculations'
+
 interface Props {
   atingMedio: number
   metaBatida: number
@@ -10,7 +12,7 @@ interface Props {
 }
 
 export function SummaryCards({ atingMedio, metaBatida, rampadas, prazosCriticos, iniciais, estrela }: Props) {
-  const atingColor = atingMedio >= 80 ? 'var(--green)' : atingMedio >= 50 ? 'var(--amber)' : 'var(--red)'
+  const atingColor = `var(--${faixaPct(atingMedio)})`
 
   return (
     <div className="strip">

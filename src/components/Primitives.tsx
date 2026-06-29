@@ -1,5 +1,7 @@
 // Primitivos visuais: Icon, Avatar, Bar, StatusTag
 
+import { faixaPct } from '../utils/calculations'
+
 type IconName =
   | 'wallet' | 'team' | 'history' | 'settings' | 'chevrons' | 'chevron'
   | 'search' | 'plus' | 'star' | 'alert' | 'dots' | 'download' | 'logout'
@@ -74,7 +76,7 @@ export function Avatar({ name, size = 38 }: AvatarProps) {
 // Barra de progresso com cor de status
 interface BarProps { pct: number }
 export function Bar({ pct }: BarProps) {
-  const color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
+  const color = `var(--${faixaPct(pct)})`
   const w = Math.max(2, Math.min(pct, 100))
   return (
     <div className="bar">
@@ -101,13 +103,12 @@ export function Growth({ crescimento }: GrowthProps) {
 // Tag de status para o hero
 interface StatusTagProps { pct: number }
 export function StatusTag({ pct }: StatusTagProps) {
-  const isGreen = pct >= 80
-  const isAmber = pct >= 50 && pct < 80
-  const label = isGreen ? 'No alvo' : isAmber ? 'Atenção' : 'Crítico'
-  const style = isGreen
-    ? { background: 'var(--green-bg)', color: 'var(--green)', borderColor: 'var(--green-line)' }
-    : isAmber
-    ? { background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber-line)' }
-    : { background: 'var(--red-bg)',   color: 'var(--red)',   borderColor: 'var(--red-line)'   }
+  const faixa = faixaPct(pct)
+  const label = faixa === 'green' ? 'No alvo' : faixa === 'amber' ? 'Atenção' : 'Crítico'
+  const style = {
+    background: `var(--${faixa}-bg)`,
+    color: `var(--${faixa})`,
+    borderColor: `var(--${faixa}-line)`,
+  }
   return <span className="status-tag" style={style}>{label}</span>
 }

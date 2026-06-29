@@ -3,10 +3,11 @@ import { Account } from '../types'
 import { Icon, Avatar, Bar, Growth } from './Primitives'
 import {
   calcPercentualMeta,
+  calcPercentualFaturamento,
   calcPercentualVendas,
   calcMesesRestantes,
   calcCrescimento,
-  faturamentoConsiderado,
+  faixaPct,
   formatarData,
   formatarMoeda,
   isContaInicial,
@@ -20,7 +21,7 @@ type SortDir = 'asc' | 'desc'
 interface Props {
   contas: Account[]
   onEditar: (conta: Account) => void
-  onImportar: (novasContas: Account[]) => void
+  onImportar: (novasContas: Account[]) => Promise<string | null>
   onToast: (msg: string, tipo: 'sucesso' | 'erro') => void
 }
 
@@ -72,8 +73,12 @@ export function AccountsTable({ contas, onEditar, onImportar, onToast }: Props) 
   const handleImportar = (event: ChangeEvent<HTMLInputElement>) => {
     const arquivo = event.target.files?.[0]
     if (!arquivo) return
-    importarCSV(arquivo, contas, (importadas, erros, novasContas) => {
-      onImportar(novasContas)
+    importarCSV(arquivo, contas, async (importadas, erros, novasContas) => {
+      const erroMsg = await onImportar(novasContas)
+      if (erroMsg) {
+        onToast(erroMsg, 'erro')
+        return
+      }
       onToast(
         `${importadas} conta(s) importada(s)${erros > 0 ? ` - ${erros} com erro` : ''}.`,
         erros > 0 ? 'erro' : 'sucesso'
@@ -156,12 +161,12 @@ export function AccountsTable({ contas, onEditar, onImportar, onToast }: Props) 
               <tr><td colSpan={8} className="empty">Nenhuma conta para esse filtro.</td></tr>
             ) : sorted.map((conta) => {
               const p      = calcPercentualMeta(conta)
-              const pFat   = conta.meta_faturamento === 0 ? 0 : Math.round((faturamentoConsiderado(conta) / conta.meta_faturamento) * 100)
+              const pFat   = calcPercentualFaturamento(conta)
               const pVend  = calcPercentualVendas(conta)
               const meses  = calcMesesRestantes(conta.data_termino)
               const inicial = isContaInicial(conta)
               const isLoja = conta.tipo === 'lojista_digital' && (conta.meta_vendas ?? 0) > 0
-              const cor    = p >= 80 ? 'green' : p >= 50 ? 'amber' : 'red'
+              const cor    = faixaPct(p)
               const crescimento = calcCrescimento(conta)
 
               return (

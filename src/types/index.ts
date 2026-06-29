@@ -20,11 +20,3 @@ export interface Account {
   status: StatusConta
   observacao?: string
 }
-
-export interface Filtros {
-  assessor: string
-  tipo: string
-  risco: string
-  status: string
-  busca: string
-}
